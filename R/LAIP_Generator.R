@@ -14,8 +14,8 @@
 # If desired the generated data contain an additional parameter "LAIP", labeling
 # the LAIP-positive events.
 #
-# Hint: the enriched data are reshuffled before exporting into FCS-file to avoid
-# anomalies in later visualization with cen-se.
+# Hint: the enriched data should be reshuffled before exporting them into a
+# FCS-file to avoid anomalies in later visualization with cen-se.
 #
 # LAIP1 has to be defined. LAIP2, LAIP3 and LAIP4 are optional.
 #
@@ -273,24 +273,24 @@ generateFlowFrame <- function(data, parameters=NULL, description=NULL){
 #' @examples addIdParameter(ff_fcs)
 addIdParameter <- function(ff){
 
-  # Kopieren eines bestehenden Parameters des FlowFrames als Vorlage
+  # Copying an existing parameter as template
   new_p <- parameters(ff)[1,]
 
-  # Umbenennen des kopierten Parameters von $P1 in $Px mit x = Parameteranzahl + 1
+  # Renaming the copied parameters of $P1 in $Px with x being parametercount + 1
   new_p_number <- as.integer(dim(ff)[2]+1)
   rownames(new_p) <- c(paste0("$P", new_p_number))
 
-  # Merge der Parameter des FlowFrames mit dem neuen Id-Parameter
+  # Merging the parameter of the flowFrame-object with the new Id-parameter
   allPars <- combine(parameters(ff), new_p)
 
-  # Setzen des Parameternamens und -beschreibung des neuen Id-Parameters
+  # Declaration of name and description of the new Id-parameter
   new_p_name <- "event_id"
   #new_p_desc <- "Unique event ID"
-  new_p_desc <- NA  #Durch Setzen der Parameterbeschreibung als NA wird dieser als Nicht-Farbkanal betrachtet.
+  new_p_desc <- NA  #By declaring the parameter description as NA the new parameter is regarded as non-color channel.
   allPars@data$name[new_p_number] <- new_p_name
   allPars@data$desc[new_p_number] <- new_p_desc
 
-  # Erweitern der Datenmatrix des FlowFrames um die event_id-Spalte
+  # Adding event_id-column to matrix of flowFrame
   orig_col_names <- dimnames(ff@exprs)[[2]]
   num_events <- as.integer(dim(ff)[1])
   event_ids <- as.matrix(1:num_events, ncol=1)
@@ -299,7 +299,7 @@ addIdParameter <- function(ff){
                                paste0("$P",as.character(new_p_number),"N"))
   dimnames(new_exprs)[[2]] <- c(orig_col_names, new_par_col_name)
 
-  # Erweitern der Keywords des FlowFrames um neuen event_id-Parameter
+  # Adding event_id-parameter to keywords of flowFrame
   new_kw <- ff@description
   new_kw["$PAR"] <- as.character(new_p_number)
   new_kw[paste0("$P",as.character(new_p_number),"N")] <- new_p_name
@@ -313,7 +313,7 @@ addIdParameter <- function(ff){
   #new_kw[paste0("flowCore_$P",as.character(new_p_number),"Rmin")] <- new_kw["flowCore_$P1Rmin"]
   #new_kw[paste0("flowCore_$P",as.character(new_p_number),"Rmax")] <- new_kw["flowCore_$P1Rmax"]
 
-  # Erstellen des neuen FlowFrame-Objektes
+  # Creation of modified flowFrame-object
   new_ff <- new("flowFrame", exprs=new_exprs, parameters=allPars, description=new_kw)
 
   return(new_ff)
@@ -349,7 +349,7 @@ addLaipParameter <- function(ff, laipLabel=100000){
   allPars@data$name[new_p_number] <- new_p_name
   allPars@data$desc[new_p_number] <- new_p_desc
 
-  # Erweitern der Datenmatrix des FlowFrames um die isLAIP-Spalte
+  # Adding isLAIP-column to matrix of flowFrame
   orig_col_names <- dimnames(ff@exprs)[[2]]
   #num_LAIP_pops <- as.integer(dim(ff)[1])
   num_LAIP_pops <- max(labelColumn)
@@ -359,7 +359,7 @@ addLaipParameter <- function(ff, laipLabel=100000){
                                paste0("$P",as.character(new_p_number),"N"))
   dimnames(new_exprs)[[2]] <- c(orig_col_names, new_par_col_name)
 
-  # Adding keywords in FlowFrame for new isLAIP-parameter
+  # Expanding keywords in FlowFrame for new isLAIP-parameter
   new_kw <- ff@description
   new_kw["$PAR"] <- as.character(new_p_number)
   new_kw[paste0("$P",as.character(new_p_number),"N")] <- new_p_name
@@ -370,10 +370,8 @@ addLaipParameter <- function(ff, laipLabel=100000){
   new_kw[paste0("$P",as.character(new_p_number),"R")] <- new_kw["$P1R"]
   new_kw[paste0("flowCore_$P",as.character(new_p_number),"Rmin")] <- 1
   new_kw[paste0("flowCore_$P",as.character(new_p_number),"Rmax")] <- 4 * laipLabel
-  #new_kw[paste0("flowCore_$P",as.character(new_p_number),"Rmin")] <- new_kw["flowCore_$P1Rmin"]
-  #new_kw[paste0("flowCore_$P",as.character(new_p_number),"Rmax")] <- new_kw["flowCore_$P1Rmax"]
 
-  #Erstellen des neuen FlowFrame-Objektes
+  #Creation of the modified flowFrame-object
   new_ff <- new("flowFrame", exprs=new_exprs, parameters=allPars, description=new_kw)
 
   return(new_ff)
