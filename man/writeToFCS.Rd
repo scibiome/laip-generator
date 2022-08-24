@@ -9,17 +9,19 @@ and saves the flowFrame as FCS-file.}
 writeToFCS(ff, data, filepath, reshuffle = TRUE)
 }
 \arguments{
-\item{ff}{= flowFrame-object}
+\item{ff}{flowFrame-object to be written into FCS-file}
 
-\item{data}{= matrix}
+\item{data}{data.frame or matrix}
 
-\item{reshuffle}{= boolean, if TRUE the rows of data are reshuffled}
-}
-\value{
+\item{filepath}{character(1) string containing the file path of the FCS-file}
 
+\item{reshuffle}{= logical (default: TRUE); if TRUE the rows of data are reshuffled}
 }
 \description{
 writeToFCS
 writeToFCS replaces the data matrix of a given flowFrame with the given data matrix
 and saves the flowFrame as FCS-file.
+}
+\examples{
+writeToFCS(ff_fcs, data, "MRDpos_BM_sample.fcs", reshuffle = TRUE)
 }

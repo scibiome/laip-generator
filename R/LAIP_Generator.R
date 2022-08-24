@@ -41,25 +41,60 @@
 
 #' simulate_LAIP_events
 #'
-#' Simulates blast-events with given LAIP-expression
+#' Simulate blast-events with given LAIP-expression.
+#' These events are simulated based on given blast-events with defined
+#' parameter being replaced with expressions of given cell populations.
 #'
-#' @param LAIP matrix
-#' @param blast_pop data.frame
+#' @param LAIP data.frame containing parameters to be replaced using expression from given population file
+#' @param blast_pop data.frame containing blast events
 #' @param pop_colnum number of columns to use in given blast_pop-data.frame
 #' @param number_of_LAIPevents number of events to be simulated
-#' @param LAIP_constraints additional constraints for given blasts. blast-events that do not fullfill
-#' @param addNoise boolean
-#' @param printScatterplot boolean
+#' @param LAIP_constraints matrix (default: NULL); optional additional constraints for given blasts. Only blast-events that fulfill the constraints are used.
+#' @param addNoise logical (default: TRUE); modifies blast-data slightly
+#' @param noiseIntensity numeric (default: 0.02); simulatedValue = (1 +- noiseIntensity) * real value
+#' @param printScatterplot logical (default: FALSE); print scatterplots of SSC-H and the selected LAIP-parameters
 #'
-#' @return data.frame
+#' @return data.frame containing the simulated LAIP-positive blast events
+#' @importFrom data.table fread
 #' @importFrom Spectre make.colour.plot
 #' @export
 #'
-#' @examples
-simulate_LAIP_events <- function(LAIP, blast_pop, pop_colnum, number_of_LAIPevents, LAIP_constraints = NULL, addNoise=TRUE, printScatterplot=FALSE){
+#' @examples In this example immature blasts with an aberrant expression of CD19 and CD56 (LAIP CD19+ CD56+) are simulated:
+#' The blast events are stored in a csv-file with the file path stored in blast_file:
+#' blast_file <- "blasts.csv"
+#' blast_data <- fread(blast_file)
+#' colnum_data <- ncol(blast_data)
+#'
+#' pro_B_cells are CD19+, nk-cells are CD56+
+#' In this example CD19 is colored with APC-A and CD56 is colored with BV711-A.
+#' To simulate the desired LAIP CD19+ CD56+ the values of APC-A and BV711-A will be overwritten
+#' using values of a range found in pro_B_cells and nk-cells:
+#' LAIP <- matrix(c("APC-A",pro_B_cells_file,
+#'                  "BV711-A",nk_cells_file),
+#'                ncol=2,
+#'                byrow=TRUE)
+#'
+#' Only immature blasts shall be used to simulate MRD. This is ensured by setting corresponding constraints:
+#' LAIP_constraints <- matrix(c("BB700-A",10000,30000,  #CD34+
+#'                              "PE-Cy7-A", 5000, NA, #CD117+, promyelocytes are CD117+, lymphocytes are CD117-
+#'                              "PEVio615-A",500,2500, #CD133+, immature blasts are CD133++
+#'                              "BV421-A",8000,NA,    #CD13+, => >lymph-pop, that is CD13-
+#'                              "APC-R700-A",6000,NA,   #CD33+
+#'                              "APC-H7-A",18000,NA,   #HLADR+
+#'                              "BV786-A",NA,4000,       #CD7-
+#'                              "BV711-A",NA,3000,      #CD56-
+#'                              "FITC-A",NA,3000,        #CD2-
+#'                              "BV650-A",NA,3000,      #CD14-
+#'                              "PerCP-eFluor 710-A",NA,2000,  #CD15-
+#'                              "APC-A",NA,3000,         #CD19-
+#'                              "PE-A",NA,3000,          #CD22-
+#'                              "BV750-A",NA,5000),     #CD11b-
+#'                             ncol=3, byrow=TRUE)
+#' laip_data <- simulate_LAIP_events(LAIP, blast_data, colnum_data, 2000, LAIP_constraints)
+simulate_LAIP_events <- function(LAIP, blast_pop, pop_colnum, number_of_LAIPevents, LAIP_constraints = NULL, addNoise=TRUE, noiseIntensity=0.02, printScatterplot=FALSE){
 
+  #Removing blast events that violate given LAIP_constraints
   if(is.null(LAIP_constraints) == FALSE){
-    #Removing blast events that violate given LAIP_constraints
     del_events <- c()
     z <- 0
     i <- 1
@@ -88,7 +123,6 @@ simulate_LAIP_events <- function(LAIP, blast_pop, pop_colnum, number_of_LAIPeven
     }
     #remove redundant values
     del_events <- unique(del_events)
-    #print(quantile(blast_pop[,"PE-Cy7-A"],c(0.01, 0.1, 0.4, 0.6, 0.8, 0.9, 0.99)))
     print(paste(length(del_events), "of", nrow(blast_pop),"blast events violate LAIP_constraints"))
 
     #remove all LAIP_constraints-violating blast-events from blast_pop
@@ -118,14 +152,6 @@ simulate_LAIP_events <- function(LAIP, blast_pop, pop_colnum, number_of_LAIPeven
     #these columns are truncated here
     ref_pop <- as.matrix(ref_pop[,1:pop_colnum])
     colnames(ref_pop) <- colnames(data)[1:pop_colnum]
-    # if(addLAIPlabel){
-    #   j <- colnum_data-1
-    #   ref_pop <- as.matrix(ref_pop[,1:j])
-    #   colnames(ref_pop) <- colnames(data)[1:j]
-    # }else{
-    #   ref_pop <- as.matrix(ref_pop[,1:colnum_data])
-    #   colnames(ref_pop) <- colnames(data)[1:colnum_data]
-    # }
 
     LAIP_parameter_data <- ref_pop[,LAIP[i,1]]
     density_function <- density(LAIP_parameter_data)
@@ -179,7 +205,7 @@ simulate_LAIP_events <- function(LAIP, blast_pop, pop_colnum, number_of_LAIPeven
 
 #' generateFlowFrame
 #'
-#' Generates a flowFrame based on the given data.frame, parameters and description
+#' Generates a flowFrame based on the given data.frame, parameters and description.
 #' Parameters and description are optional. Without given description the first
 #' 7 columns must be non-color-parameter (time, SSC-H, etc.) data
 #'
@@ -238,9 +264,9 @@ generateFlowFrame <- function(data, parameters=NULL, description=NULL){
 
 #' addIdParameter
 #' Adds an event-unique Id-parameter to a given flowFrame
-#' @param ff = flowFrame-object
+#' @param ff flowFrame-object
 #'
-#' @return flowFrame-object
+#' @return flowFrame-object with added Id-parameter
 #' @importFrom BiocGenerics combine
 #' @export
 #'
@@ -294,15 +320,16 @@ addIdParameter <- function(ff){
 }
 
 #' addLaipParameter
-#' Adds the parameter isLAIP to the given flowFrame.
-#' @param ff = flowFrame-object
+#' Adds the parameter isLAIP to the given flowFrame to mark simulated LAIP-positive events.
+#' @param ff flowFrame-object
+#' @param laipLabel numeric (default = 100000), number > 0 to mark simulated LAIP-positive events
 #' @importFrom BiocGenerics combine
 #'
-#' @return
+#' @return flowFrame-object with isLAIP-parameter
 #' @export
 #'
-#' @examples
-addLaipParameter <- function(ff){
+#' @examples addLaipParameter(ff_fcs)
+addLaipParameter <- function(ff, laipLabel=100000){
 
   labelColumn <- rep(0, as.integer(dim(ff)[1]))
   # Cloning an existing parameter of the flow frame as template
@@ -355,18 +382,15 @@ addLaipParameter <- function(ff){
 
 #' print_scatterplot
 #' print_scatterplot is a function for debugging purpose
-#' @param data
-#' @param max_rows
-#' @param x = x-axis
-#' @param y = y-axis
-#' @param log_transform_y
-#' @param laipColumnName
+#' @param data data.frame or matrix with events to be plotted
+#' @param max_rows numeric (default = 10000), specifying the number of events to be plotted
+#' @param x string, specifying the parameter to be plotted on x-axis
+#' @param y string, specifying the parameter to be plotted on y-axis
+#' @param log_transform_y logical (default: TRUE); if TRUE the values to be plotted on y-axis are log_transformed
+#' @param laipColumnName string, specifying the parameter marking simulated LAIP-positive events
 #'
 #' @return
 #' @importFrom Spectre make.colour.plot
-#' @export
-#'
-#' @examples
 print_scatterplot <- function(data, max_rows=10000, x="SSC-H",y,log_transform_y = TRUE,laipColumnName=NULL){
 
   if(nrow(data) > max_rows){
@@ -428,19 +452,47 @@ print_scatterplot <- function(data, max_rows=10000, x="SSC-H",y,log_transform_y 
   }
 }
 
+#' log_transform_no_neg
+#' Log-transformation that returns zero for all values < 1.
+#' @param x numeric vector
+#'
+#' @return log-transformed numeric vector
+#'
+#' @examples log_transform_no_neg(y_axis)
+log_transform_no_neg <- function(x){
+  if(length(x)>1){
+    y <- seq(0,0, length.out=length(x))
+    for(i in 1:length(x)){
+      if(x[i] > 1){
+        y[i] <- log(x[i])
+      }else{
+        y[i] <- 0
+      }
+    }
+    return(y)
+  }else{
+    y <- 0
+    if(x > 1){
+      y <- log(x)
+    }else{
+      y <- 0
+    }
+    return(y)
+  }
+}
+
 #' writeToFCS
 #' writeToFCS replaces the data matrix of a given flowFrame with the given data matrix
 #' and saves the flowFrame as FCS-file.
-#' @param ff = flowFrame-object
-#' @param data = matrix
-#' @param filepath
-#' @param reshuffle = boolean, if TRUE the rows of data are reshuffled
+#' @param ff flowFrame-object to be written into FCS-file
+#' @param data data.frame or matrix
+#' @param filepath character(1) string containing the file path of the FCS-file
+#' @param reshuffle = logical (default: TRUE); if TRUE the rows of data are reshuffled
 #'
-#' @return
 #' @importFrom flowCore write.FCS
 #' @export
 #'
-#' @examples
+#' @examples writeToFCS(ff_fcs, data, "MRDpos_BM_sample.fcs", reshuffle = TRUE)
 writeToFCS <- function(ff, data, filepath, reshuffle = TRUE){
 
   #reshuffling data to avoid anomalies in cen-se visualization
@@ -448,7 +500,7 @@ writeToFCS <- function(ff, data, filepath, reshuffle = TRUE){
     data <- data[sample(nrow(data)),]
   }
 
-  ff@exprs <- data
+  ff@exprs <- as.matrix(data)
 
   print(paste("Saving simulated data in ", filepath, sep=""))
   write.FCS(ff_fcs, filepath, what="numeric", delimiter = "|", endian="big")

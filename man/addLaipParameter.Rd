@@ -3,17 +3,22 @@
 \name{addLaipParameter}
 \alias{addLaipParameter}
 \title{addLaipParameter
-Adds the parameter isLAIP to the given flowFrame.}
+Adds the parameter isLAIP to the given flowFrame to mark simulated LAIP-positive events.}
 \usage{
-addLaipParameter(ff)
+addLaipParameter(ff, laipLabel = 1e+05)
 }
 \arguments{
-\item{ff}{= flowFrame-object}
+\item{ff}{flowFrame-object}
+
+\item{laipLabel}{numeric (default = 100000), number > 0 to mark simulated LAIP-positive events}
 }
 \value{
-
+flowFrame-object with isLAIP-parameter
 }
 \description{
 addLaipParameter
-Adds the parameter isLAIP to the given flowFrame.
+Adds the parameter isLAIP to the given flowFrame to mark simulated LAIP-positive events.
+}
+\examples{
+addLaipParameter(ff_fcs)
 }

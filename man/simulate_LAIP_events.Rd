@@ -11,27 +11,66 @@ simulate_LAIP_events(
   number_of_LAIPevents,
   LAIP_constraints = NULL,
   addNoise = TRUE,
+  noiseIntensity = 0.02,
   printScatterplot = FALSE
 )
 }
 \arguments{
-\item{LAIP}{matrix}
+\item{LAIP}{data.frame containing parameters to be replaced using expression from given population file}
 
-\item{blast_pop}{data.frame}
+\item{blast_pop}{data.frame containing blast events}
 
 \item{pop_colnum}{number of columns to use in given blast_pop-data.frame}
 
 \item{number_of_LAIPevents}{number of events to be simulated}
 
-\item{LAIP_constraints}{additional constraints for given blasts. blast-events that do not fullfill}
+\item{LAIP_constraints}{matrix (default: NULL); optional additional constraints for given blasts. Only blast-events that fulfill the constraints are used.}
 
-\item{addNoise}{boolean}
+\item{addNoise}{logical (default: TRUE); modifies blast-data slightly}
 
-\item{printScatterplot}{boolean}
+\item{noiseIntensity}{numeric (default: 0.02); simulatedValue = (1 +- noiseIntensity) * real value}
+
+\item{printScatterplot}{logical (default: FALSE); print scatterplots of SSC-H and the selected LAIP-parameters}
 }
 \value{
-data.frame
+data.frame containing the simulated LAIP-positive blast events
 }
 \description{
-Simulates blast-events with given LAIP-expression
+Simulate blast-events with given LAIP-expression.
+These events are simulated based on given blast-events with defined
+parameter being replaced with expressions of given cell populations.
+}
+\examples{
+In this example immature blasts with an aberrant expression of CD19 and CD56 (LAIP CD19+ CD56+) are simulated:
+The blast events are stored in a csv-file with the file path stored in blast_file:
+blast_file <- "blasts.csv"
+blast_data <- fread(blast_file)
+colnum_data <- ncol(blast_data)
+
+pro_B_cells are CD19+, nk-cells are CD56+
+In this example CD19 is colored with APC-A and CD56 is colored with BV711-A.
+To simulate the desired LAIP CD19+ CD56+ the values of APC-A and BV711-A will be overwritten
+using values of a range found in pro_B_cells and nk-cells:
+LAIP <- matrix(c("APC-A",pro_B_cells_file,
+                 "BV711-A",nk_cells_file),
+               ncol=2,
+               byrow=TRUE)
+
+Only immature blasts shall be used to simulate MRD. This is ensured by setting corresponding constraints:
+LAIP_constraints <- matrix(c("BB700-A",10000,30000,  #CD34+
+                             "PE-Cy7-A", 5000, NA, #CD117+, promyelocytes are CD117+, lymphocytes are CD117-
+                             "PEVio615-A",500,2500, #CD133+, immature blasts are CD133++
+                             "BV421-A",8000,NA,    #CD13+, => >lymph-pop, that is CD13-
+                             "APC-R700-A",6000,NA,   #CD33+
+                             "APC-H7-A",18000,NA,   #HLADR+
+                             "BV786-A",NA,4000,       #CD7-
+                             "BV711-A",NA,3000,      #CD56-
+                             "FITC-A",NA,3000,        #CD2-
+                             "BV650-A",NA,3000,      #CD14-
+                             "PerCP-eFluor 710-A",NA,2000,  #CD15-
+                             "APC-A",NA,3000,         #CD19-
+                             "PE-A",NA,3000,          #CD22-
+                             "BV750-A",NA,5000),     #CD11b-
+                            ncol=3, byrow=TRUE)
+laip_data <- simulate_LAIP_events(LAIP, blast_data, colnum_data, 2000, LAIP_constraints)
 }

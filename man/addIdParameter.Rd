@@ -8,10 +8,10 @@ Adds an event-unique Id-parameter to a given flowFrame}
 addIdParameter(ff)
 }
 \arguments{
-\item{ff}{= flowFrame-object}
+\item{ff}{flowFrame-object}
 }
 \value{
-flowFrame-object
+flowFrame-object with added Id-parameter
 }
 \description{
 addIdParameter

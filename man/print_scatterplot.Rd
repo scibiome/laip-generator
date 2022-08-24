@@ -15,11 +15,17 @@ print_scatterplot(
 )
 }
 \arguments{
-\item{x}{= x-axis}
+\item{data}{data.frame or matrix with events to be plotted}
 
-\item{y}{= y-axis}
+\item{max_rows}{numeric (default = 10000), specifying the number of events to be plotted}
 
-\item{laipColumnName}{}
+\item{x}{string, specifying the parameter to be plotted on x-axis}
+
+\item{y}{string, specifying the parameter to be plotted on y-axis}
+
+\item{log_transform_y}{logical (default: TRUE); if TRUE the values to be plotted on y-axis are log_transformed}
+
+\item{laipColumnName}{string, specifying the parameter marking simulated LAIP-positive events}
 }
 \value{
 

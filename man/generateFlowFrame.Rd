@@ -17,7 +17,7 @@ generateFlowFrame(data, parameters = NULL, description = NULL)
 flowFrame-object
 }
 \description{
-Generates a flowFrame based on the given data.frame, parameters and description
+Generates a flowFrame based on the given data.frame, parameters and description.
 Parameters and description are optional. Without given description the first
 7 columns must be non-color-parameter (time, SSC-H, etc.) data
 }
