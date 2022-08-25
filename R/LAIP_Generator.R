@@ -56,7 +56,6 @@
 #'
 #' @return data.frame containing the simulated LAIP-positive blast events
 #' @importFrom data.table fread
-#' @importFrom Spectre make.colour.plot
 #' @export
 #'
 #' @examples In this example immature blasts with an aberrant expression of CD19 and CD56 (LAIP CD19+ CD56+) are simulated:
@@ -161,42 +160,42 @@ simulate_LAIP_events <- function(LAIP, blast_pop, pop_colnum, number_of_LAIPeven
                                     density_function$x,
                                     runif(number_of_LAIPevents))$y
 
-    if(printScatterplot){
-      #Share of simulated LAIPpos-data within plot should be at least 5%.
-      if(nrow(blast_pop) > number_of_LAIPevents*20){
-        blast_limit <- number_of_LAIPevents*19
-      }else{
-        blast_limit <- nrow(blast_pop)
-      }
-
-      plotDir <- getDirFromFilepath(output_FileName)
-
-      #Extract the SSC-H and the LAIP-relevant parameter from the blast and the simulated data
-      plotting_data <- rbind(blast_pop[1:blast_limit,c("SSC-H",LAIP[i,1])],LAIP_data[,c("SSC-H",LAIP[i,1])])
-
-      laipLabel <- seq(0, 0, length.out = nrow(plotting_data)-number_of_LAIPevents)
-      laipLabel <- append(laipLabel,seq(1,1, length.out = number_of_LAIPevents))
-
-      plotting_data <- cbind(plotting_data, laipLabel)
-
-      #Perform log-transformation on LAIP-relevant parameter and renaming the column
-      plotting_data[,LAIP[i,1]] <- sapply(plotting_data[,LAIP[i,1]],FUN=log_transform)
-      laipColumn <- paste("log(",LAIP[i,1],")",sep="")
-      colnames(plotting_data) <- c("SSC-H",laipColumn,"laipLabel")
-
-      make.colour.plot(dat = as.data.table(plotting_data),
-                       x.axis = "SSC-H",
-                       y.axis = laipColumn,
-                       #y.axis = "BV786-A",
-                       col.type = "factor",
-                       col.axis = "laipLabel",
-                       title = paste("Blasts with abnormal", LAIP[i,1], "expression."),
-                       plot.width = 20,
-                       plot.height = 20,
-                       legend.loc = "right",
-                       save.to.disk = TRUE,
-                       path = plotDir)
-      }
+    # if(printScatterplot){
+    #   #Share of simulated LAIPpos-data within plot should be at least 5%.
+    #   if(nrow(blast_pop) > number_of_LAIPevents*20){
+    #     blast_limit <- number_of_LAIPevents*19
+    #   }else{
+    #     blast_limit <- nrow(blast_pop)
+    #   }
+    #
+    #   plotDir <- getDirFromFilepath(output_FileName)
+    #
+    #   #Extract the SSC-H and the LAIP-relevant parameter from the blast and the simulated data
+    #   plotting_data <- rbind(blast_pop[1:blast_limit,c("SSC-H",LAIP[i,1])],LAIP_data[,c("SSC-H",LAIP[i,1])])
+    #
+    #   laipLabel <- seq(0, 0, length.out = nrow(plotting_data)-number_of_LAIPevents)
+    #   laipLabel <- append(laipLabel,seq(1,1, length.out = number_of_LAIPevents))
+    #
+    #   plotting_data <- cbind(plotting_data, laipLabel)
+    #
+    #   #Perform log-transformation on LAIP-relevant parameter and renaming the column
+    #   plotting_data[,LAIP[i,1]] <- sapply(plotting_data[,LAIP[i,1]],FUN=log_transform)
+    #   laipColumn <- paste("log(",LAIP[i,1],")",sep="")
+    #   colnames(plotting_data) <- c("SSC-H",laipColumn,"laipLabel")
+    #
+    #   make.colour.plot(dat = as.data.table(plotting_data),
+    #                    x.axis = "SSC-H",
+    #                    y.axis = laipColumn,
+    #                    #y.axis = "BV786-A",
+    #                    col.type = "factor",
+    #                    col.axis = "laipLabel",
+    #                    title = paste("Blasts with abnormal", LAIP[i,1], "expression."),
+    #                    plot.width = 20,
+    #                    plot.height = 20,
+    #                    legend.loc = "right",
+    #                    save.to.disk = TRUE,
+    #                    path = plotDir)
+    #   }
   }
 
   return(LAIP_data)
@@ -388,7 +387,6 @@ addLaipParameter <- function(ff, laipLabel=100000){
 #' @param laipColumnName string, specifying the parameter marking simulated LAIP-positive events
 #'
 #' @return
-#' @importFrom Spectre make.colour.plot
 print_scatterplot <- function(data, max_rows=10000, x="SSC-H",y,log_transform_y = TRUE,laipColumnName=NULL){
 
   if(nrow(data) > max_rows){
@@ -423,31 +421,31 @@ print_scatterplot <- function(data, max_rows=10000, x="SSC-H",y,log_transform_y 
     }
   }
 
-  if(is.null(laipColumnName)){
-    make.colour.plot(dat = as.data.table(plotting_data),
-                     x.axis = x,
-                     y.axis = yColumn,
-                     title = paste(x, "-", y, "-scatterplot."),
-                     plot.width = 15,
-                     plot.height = 12,
-                     square = FALSE,
-                     legend.loc = "right",
-                     save.to.disk = TRUE,
-                     path = plotDir)
-  }else{
-    make.colour.plot(dat = as.data.table(plotting_data),
-                     x.axis = x,
-                     y.axis = yColumn,
-                     col.type = "factor",
-                     col.axis = laipColumnName,
-                     title = paste(x, "-", y, "-scatterplot with LAIPs."),
-                     plot.width = 15,
-                     plot.height = 12,
-                     square = FALSE,
-                     legend.loc = "right",
-                     save.to.disk = TRUE,
-                     path = plotDir)
-  }
+  # if(is.null(laipColumnName)){
+  #   make.colour.plot(dat = as.data.table(plotting_data),
+  #                    x.axis = x,
+  #                    y.axis = yColumn,
+  #                    title = paste(x, "-", y, "-scatterplot."),
+  #                    plot.width = 15,
+  #                    plot.height = 12,
+  #                    square = FALSE,
+  #                    legend.loc = "right",
+  #                    save.to.disk = TRUE,
+  #                    path = plotDir)
+  # }else{
+  #   make.colour.plot(dat = as.data.table(plotting_data),
+  #                    x.axis = x,
+  #                    y.axis = yColumn,
+  #                    col.type = "factor",
+  #                    col.axis = laipColumnName,
+  #                    title = paste(x, "-", y, "-scatterplot with LAIPs."),
+  #                    plot.width = 15,
+  #                    plot.height = 12,
+  #                    square = FALSE,
+  #                    legend.loc = "right",
+  #                    save.to.disk = TRUE,
+  #                    path = plotDir)
+  # }
 }
 
 #' log_transform_no_neg
