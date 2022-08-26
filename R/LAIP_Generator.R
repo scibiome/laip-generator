@@ -39,6 +39,203 @@
 #
 ##############################################################
 
+#' simulate_MRD
+#'
+#' simulate_MRD is a wrapper function that bundles simulation and integration
+#' of LAIP-positive blasts in a given flowFrame-object.
+#' These events are simulated based on given blast-events with defined
+#' parameters being replaced with expressions of given cell populations.
+#' The simulation of up to 4 different LAIP-populations is supported.
+#' @param ff flowFrame-object to be enriched with LAIP-positive events
+#' @param LAIP1 matrix; specifies parameters to be replaced using expression from given population file
+#' @param LAIP2 matrix (default: NULL); specifies parameters to be replaced using expression from given population file
+#' @param LAIP3 matrix (default: NULL); specifies parameters to be replaced using expression from given population file
+#' @param LAIP4 matrix (default: NULL); specifies parameters to be replaced using expression from given population file
+#' @param blast_pop data.frame containing blast events
+#' @param number_of_LAIPevents number of events to be simulated
+#' @param maxRows numeric (default: 0); specifies number of events in the new MRD-positive flowFrame-object; 0 = unlimited
+#' @param LAIP_constraints matrix (default: NULL); optional additional constraints for given blasts. Only blast-events that fulfill the constraints are used.
+#' @param addNoise logical (default: TRUE); modifies blast-data slightly
+#' @param noiseIntensity numeric (default: 0.02); simulatedValue = (1 +- noiseIntensity) * real value
+#' @param addLAIPlabel logical (default: TRUE); add isLAIP as additional parameter to given flowFrame labeling the simulated events
+#' @param laipLabel numeric (default: 100000); specifies the value used to label simulated data. if > 1 LAIP-combination is simulated, the label will be LAIP-number * laipLabel
+#' @param printScatterplot logical (default: FALSE); print scatterplots of SSC-H and the selected LAIP-parameters
+#'
+#' @return data.frame containing the simulated LAIP-positive blast events
+#' @importFrom data.table fread
+#' @export
+#'
+#' @examples In this example a bone matter sample with 2 m events is enriched
+#' with two populations of immature blasts with an aberrant expression.
+#' Both LAIP-population will consist of 2000 events each.
+#' The first LAIP-population has an aberrant expression of CD19 and CD56
+#' (LAIP1: CD19+ CD56+), the second LAIP-population shows a loss of HLA_DR
+#' (LAIP2: HLA_DR-).
+#' The data of the bone matter sample are stored in a FCS-file.
+#' The blast events are stored in a csv-file.
+#'
+#' library(flowCore)
+#' library(data.table)
+#' fcs_file <- "bm_sample.fcs"
+#' ff_fcs <- read.FCS(fcs_file, transformation = FALSE, truncate_max_range = FALSE)
+#' blast_file <- "blasts.csv"
+#' blast_data <- fread(blast_file)
+#'
+#' pro_B_cells are CD19+, nk-cells are CD56+
+#' In this example CD19 is colored with APC-A and CD56 is colored with BV711-A.
+#' To simulate the desired LAIP-population with CD19+ CD56+ the values of APC-A
+#' and BV711-A will be overwritten using values of a range found in pro_B_cells
+#' and nk-cells:
+#'
+#' pro_B_cells_file <- "pro_b_cell.csv"
+#' nk_cells_file <- "nk_cell.csv"
+#' LAIP1 <- matrix(c("APC-A",pro_B_cells_file,
+#'                  "BV711-A",nk_cells_file),
+#'                ncol=2,
+#'                byrow=TRUE)
+#'
+#' The second LAIP-population (HLA_DR-) is simulated by overwriting the values
+#' of APC-H7-A using values of a range found in granulocytes.
+#'
+#' granu_file <- "granulocytes.csv"
+#' LAIP2 <- matrix(c("APC-H7-A",granu_file),
+#'                 ncol=2,
+#'                 byrow=TRUE)
+#'
+#' Only immature blasts shall be used to simulate MRD. This is ensured by setting
+#' corresponding constraints:
+#'
+#' LAIP_constraints <- matrix(c("BB700-A",10000,30000, #CD34+
+#'                              "PE-Cy7-A", 5000, NA,  #CD117+,
+#'                              "PEVio615-A",500,2500, #CD133+,
+#'                              "BV421-A",8000,NA,     #CD13+,
+#'                              "APC-R700-A",6000,NA,  #CD33+
+#'                              "APC-H7-A",18000,NA,   #HLADR+
+#'                              "BV786-A",NA,4000,     #CD7-
+#'                              "BV711-A",NA,3000,     #CD56-
+#'                              "FITC-A",NA,3000,      #CD2-
+#'                              "BV650-A",NA,3000,     #CD14-
+#'                              "PerCP-eFluor 710-A",NA,2000,  #CD15-
+#'                              "APC-A",NA,3000,       #CD19-
+#'                              "PE-A",NA,3000,        #CD22-
+#'                              "BV750-A",NA,5000),    #CD11b-
+#'                             ncol=3, byrow=TRUE)
+#' ff_MRD <- simulate_MRD(ff=ff_fcs, LAIP1=LAIP1, LAIP2=LAIP2, blast_pop=blast_data, number_of_LAIPevents=2000, maxRows=2000000, LAIP_constraints=LAIP_constraints)
+#'
+#' The new flowFrame-object can be exported into a FCS-file:
+#'
+#' output_FileName <- "MRD_positive_bm_sample.fcs"
+#' write.FCS(ff_fcs, output_FileName, what="numeric", delimiter = "|", endian="big")
+simulate_MRD <- function(ff, LAIP1, LAIP2=NULL, LAIP3=NULL, LAIP4=NULL, blast_pop, number_of_LAIPevents, maxRows = 0, LAIP_constraints = NULL, addNoise=TRUE, noiseIntensity=0.02, addLAIPlabel=TRUE, laipLabel=100000, printScatterplot=FALSE){
+  data <- flowCore::exprs(ff)
+  attribute_names <- colnames(data)
+  print(paste("FCS-file with ",nrow(data)," events imported.", sep=""))
+
+  if(maxRows>0){
+    maxRows <- maxRows - number_of_LAIPevents
+
+    if(is.null(LAIP2)==FALSE){
+      maxRows <- maxRows - number_of_LAIPevents
+    }
+
+    if(is.null(LAIP3)==FALSE){
+      maxRows <- maxRows - number_of_LAIPevents
+    }
+
+    if(is.null(LAIP4)==FALSE){
+      maxRows <- maxRows - number_of_LAIPevents
+    }
+
+    data <- data[sample(1:nrow(data), maxRows), ]
+  }
+
+  colnum_data <- ncol(data)
+
+  blast_pop <- blast_pop[,1:colnum_data]
+  colnames(blast_pop) <- attribute_names
+
+  if(addLAIPlabel){
+    print("Adding isLAIP-label to flowFrame")
+    ff_fcs <- addLaipParameter(ff_fcs)
+
+    labelColumn <- rep(0, nrow(data))
+
+    data <- cbind(data, labelColumn)
+    attribute_names <- append(attribute_names, "isLAIP")
+    colnames(data) <- attribute_names
+  }
+
+  print("Generating LAIP-1 events...")
+  LAIP1_data <- simulate_LAIP_events(LAIP=LAIP1, blast_pop=blast_pop, pop_colnum=colnum_data, number_of_LAIPevents=number_of_LAIPevents, LAIP_constraints=LAIP_constraints, addNoise=addNoise, noiseIntensity=noiseIntensity, printScatterplot=printScatterplot)
+
+  if(addLAIPlabel){
+    usedLabel <- 1 * laipLabel
+    print(paste("Adding isLAIP-label=", usedLabel, " to simulated data", sep=""))
+
+    labelColumn <- rep(usedLabel, nrow(LAIP1_data))
+    LAIP1_data <- cbind(LAIP1_data, labelColumn)
+  }
+  colnames(LAIP1_data) <- attribute_names
+  data <- rbind(LAIP1_data, data)
+
+
+  if(is.null(LAIP2)==FALSE){
+    print("Generating LAIP-2 events...")
+
+    LAIP2_data <- simulate_LAIP_events(LAIP=LAIP2, blast_pop=blast_pop, pop_colnum=colnum_data, number_of_LAIPevents=number_of_LAIPevents, LAIP_constraints=LAIP_constraints, addNoise=addNoise, noiseIntensity=noiseIntensity, printScatterplot=printScatterplot)
+
+    if(addLAIPlabel){
+      usedLabel <- 2 * laipLabel
+      print(paste("Adding isLAIP-label=", usedLabel, " to simulated data", sep=""))
+
+      labelColumn <- rep(usedLabel, nrow(LAIP2_data))
+      LAIP2_data <- cbind(LAIP2_data, labelColumn)
+    }
+    colnames(LAIP2_data) <- attribute_names
+    data <- rbind(LAIP2_data, data)
+  }
+
+  if(is.null(LAIP3)==FALSE){
+    print("Generating LAIP-3 events...")
+
+    LAIP3_data <- simulate_LAIP_events(LAIP=LAIP3, blast_pop=blast_pop, pop_colnum=colnum_data, number_of_LAIPevents=number_of_LAIPevents, LAIP_constraints=LAIP_constraints, addNoise=addNoise, noiseIntensity=noiseIntensity, printScatterplot=printScatterplot)
+
+    if(addLAIPlabel){
+      usedLabel <- 3 * laipLabel
+      print(paste("Adding isLAIP-label=", usedLabel, " to simulated data", sep=""))
+
+      labelColumn <- rep(usedLabel, nrow(LAIP3_data))
+      LAIP3_data <- cbind(LAIP3_data, labelColumn)
+    }
+    colnames(LAIP3_data) <- attribute_names
+    data <- rbind(LAIP3_data, data)
+  }
+
+  if(is.null(LAIP4)==FALSE){
+    print("Generating LAIP-4 events...")
+
+    LAIP4_data <- simulate_LAIP_events(LAIP=LAIP4, blast_pop=blast_pop, pop_colnum=colnum_data, number_of_LAIPevents=number_of_LAIPevents, LAIP_constraints=LAIP_constraints, addNoise=addNoise, noiseIntensity=noiseIntensity, printScatterplot=printScatterplot)
+
+    if(addLAIPlabel){
+      usedLabel <- 4 * laipLabel
+      print(paste("Adding isLAIP-label=", usedLabel, " to simulated data", sep=""))
+
+      labelColumn <- rep(usedLabel, nrow(LAIP4_data))
+      LAIP4_data <- cbind(LAIP4_data, labelColumn)
+    }
+    colnames(LAIP4_data) <- attribute_names
+    data <- rbind(LAIP4_data, data)
+  }
+
+  #reshuffling data to avoid anomalies in cen-se visualization
+  data <- data[sample(nrow(data)),]
+  ff_fcs@exprs <- data
+
+  return(ff_fcs)
+}
+
+
+
 #' simulate_LAIP_events
 #'
 #' Simulate blast-events with given LAIP-expression.
@@ -92,6 +289,8 @@
 #' laip_data <- simulate_LAIP_events(LAIP, blast_data, colnum_data, 2000, LAIP_constraints)
 simulate_LAIP_events <- function(LAIP, blast_pop, pop_colnum, number_of_LAIPevents, LAIP_constraints = NULL, addNoise=TRUE, noiseIntensity=0.02, printScatterplot=FALSE){
 
+  blast_pop <- as.matrix(blast_pop)
+
   #Removing blast events that violate given LAIP_constraints
   if(is.null(LAIP_constraints) == FALSE){
     del_events <- c()
@@ -124,6 +323,10 @@ simulate_LAIP_events <- function(LAIP, blast_pop, pop_colnum, number_of_LAIPeven
     del_events <- unique(del_events)
     print(paste(length(del_events), "of", nrow(blast_pop),"blast events violate LAIP_constraints"))
 
+    if(length(del_events) == nrow(blast_pop)){
+      stop("No blast event fulfills given LAIP_constraints!")
+    }
+
     #remove all LAIP_constraints-violating blast-events from blast_pop
     blast_pop <- blast_pop[-del_events,]
   }
@@ -150,7 +353,7 @@ simulate_LAIP_events <- function(LAIP, blast_pop, pop_colnum, number_of_LAIPeven
     #exported population data contain sometimes additional attributes like "simulated time"
     #these columns are truncated here
     ref_pop <- as.matrix(ref_pop[,1:pop_colnum])
-    colnames(ref_pop) <- colnames(data)[1:pop_colnum]
+    colnames(ref_pop) <- colnames(blast_pop)[1:pop_colnum]
 
     LAIP_parameter_data <- ref_pop[,LAIP[i,1]]
     density_function <- density(LAIP_parameter_data)

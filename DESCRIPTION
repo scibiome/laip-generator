@@ -4,7 +4,7 @@ Version: 1.0
 Authors@R: 
     person("Sebastian", "Mueller", email="se.mueller@tu-braunschweig.de", role = c("aut", "cre"))
 Description: R-based data generator to simulate blast-events with user defined marker expressions. The simulated data can be integrated in an existing fcs-file to simulate a MRD-positive bone matter sample.
-Imports: flowCore, Biobase, BiocGeneric, data.table
+Imports: flowCore, Biobase, BiocGenerics, data.table
 License: use_gpl3_license()
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
